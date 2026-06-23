@@ -1,0 +1,22 @@
+ProcessPoolExecutor experiment notes
+
+- Implementation: S2/S3 offer calculation uses ProcessPoolExecutor.
+- Target method: OutsourcingSupplier.get_offer()
+- Worker count: len(self.outsources) = 2
+- Runtime command: /usr/bin/time -p python3 main.py
+- Runtime:
+  - real: 149.00 sec
+  - user: 216.96 sec
+  - sys: 17.18 sec
+
+Result summary:
+- Without outsourcing total_loss: 2916145
+- FCFS with outsourcing total_loss: 82620
+- EDD with outsourcing total_loss: 82620
+- Outsourced jobs: 12
+- NoContract jobs: 4
+
+Observation:
+- The outsourcing result is the same as the previous ThreadPool version.
+- The runtime did not improve in this prototype because ProcessPool has process startup and data transfer overhead.
+- A more effective implementation would keep worker processes alive or parallelize GA fitness evaluation inside each supplier.

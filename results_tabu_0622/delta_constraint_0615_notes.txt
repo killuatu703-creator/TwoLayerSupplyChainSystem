@@ -1,0 +1,28 @@
+Delta constraint experiment notes - 2026-06-15
+
+Change:
+- Added a simple loss-reduction condition to outsourcing offer selection.
+- A feasible offer is accepted only when Delta L > 0.
+
+Formula:
+- local_loss = max(0, local_completion_time - due_date) * penalty
+- outsourcing_loss = max(0, offer_due_date - due_date) * penalty + offer_price
+- Delta L = local_loss - outsourcing_loss
+
+Result with expanded scale:
+- S1 jobs: 16
+- S2/S3 existing jobs: 8 each
+- Resources: 4
+- Outsourcing upper limit: removed in practice by setting it to the S1 job count
+- Runtime with ThreadPoolExecutor: 164.17 seconds
+
+Output:
+- Without outsourcing total_loss: 1415625
+- FCFS contracted jobs: 0 / 16
+- EDD contracted jobs: 0 / 16
+- All candidate offers were rejected because Delta L was not positive.
+
+Interpretation:
+- The Delta L condition successfully prevents the previous behavior where all jobs were outsourced.
+- In this parameter setting, however, the simplified Delta L condition is too strict, so no job is outsourced.
+- Next step: tune cost, penalty, and due-date parameters or refine the loss function with transportation and opportunity loss.

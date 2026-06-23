@@ -1,0 +1,4 @@
+case,makespan,gross_tardiness,weighted_tardiness,total_flow_time,ga_flow_time_weight,ga_objective,total_penalty,outsourcing_charge,total_loss,loss_without_outsourcing,loss_reduction,net_profit,outsourced_jobs
+GA_without_outsourcing,23435,150720,1415625,202725,0.0,1415625.0,1415625,0,1415625,1415625,0,-1346425,0
+GA_with_outsourcing_FCFS,23595,164760,1515395,223455,0.0,1515395.0,1515395,0,1515395,1415625,-99770,-1446195,0
+GA_with_outsourcing_EDD,23595,164760,1515395,223455,0.0,1515395.0,1515395,0,1515395,1415625,-99770,-1446195,0

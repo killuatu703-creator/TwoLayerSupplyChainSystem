@@ -1,0 +1,6 @@
+job_name,winner,winner_due_date,winner_price,all_offers
+Work10,S2,1515,4970,"S2: due=1515, price=4970, feasible=True; S3: due=1515, price=5060, feasible=True"
+Work9,S2,1340,6150,"S2: due=1340, price=6150, feasible=True; S3: due=1340, price=6280, feasible=True"
+Work1,S2,780,6150,"S2: due=780, price=6150, feasible=True; S3: due=780, price=6280, feasible=True"
+Work5,S2,1060,7330,"S2: due=1060, price=7330, feasible=True; S3: due=1060, price=7500, feasible=True"
+Work2,S3,955,7500,"S2: due=1130, price=7330, feasible=True; S3: due=955, price=7500, feasible=True"

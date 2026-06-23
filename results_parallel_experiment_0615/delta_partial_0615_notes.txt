@@ -1,0 +1,26 @@
+Partial outsourcing experiment notes - 2026-06-15
+
+Change:
+- Added a simple Delta L condition to outsourcing offer selection.
+- Tuned the test parameters so that some jobs have positive Delta L and some do not.
+
+Experiment setting:
+- S1 jobs: 16
+- S2/S3 existing jobs: 8 each
+- Resources: 4
+- Outsourcing upper limit: removed in practice by setting it to the S1 job count
+- Offer calculation: ThreadPoolExecutor
+- Runtime: 137.81 seconds
+
+Result:
+- Without outsourcing total_loss: 2916145
+- FCFS outsourced jobs: 12 / 16
+- EDD outsourced jobs: 12 / 16
+- FCFS/EDD total_loss: 82620
+- FCFS/EDD no-contract jobs: S1J09, S1J10, S1J11, S1J12
+
+Interpretation:
+- The fixed 5-job outsourcing limit is no longer needed for this experiment.
+- The simple Delta L condition prevents outsourcing jobs whose expected loss reduction is not positive.
+- In this test, 12 jobs are outsourced and 4 jobs are rejected by the Delta L condition.
+- This is still a simplified version of the paper's loss function because transportation scheduling and opportunity loss are not fully modeled yet.

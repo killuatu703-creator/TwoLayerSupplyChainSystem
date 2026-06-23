@@ -1,0 +1,28 @@
+Greedy outsourcing experiment notes - 2026-06-22
+
+Change:
+- Added a paper-inspired Greedy outsourcing rule.
+- Each iteration evaluates all candidate jobs and all outsourcing suppliers.
+- The selected contract is the (job, supplier) pair with the largest positive loss reduction Delta L.
+
+Experiment setting:
+- S1 jobs: 16
+- S2/S3 existing jobs: 8 each
+- Resources: 4
+- Compared rules: FCFS, EDD, GREEDY
+- Runtime command: /usr/bin/time -p python3 main.py
+- Runtime:
+  - real: 227.05 sec
+  - user: 354.68 sec
+  - sys: 19.08 sec
+
+Result summary:
+- Without outsourcing total_loss: 2916145
+- FCFS total_loss: 82620, outsourced jobs: 12
+- EDD total_loss: 82620, outsourced jobs: 12
+- GREEDY total_loss: 71010, outsourced jobs: 10
+
+Observation:
+- GREEDY produced a lower total_loss than FCFS and EDD in this test.
+- GREEDY evaluates more candidate combinations, so runtime increased.
+- This is still a simplified version of the paper because transportation scheduling, multi-stage negotiation, and full opportunity loss are not fully modeled.

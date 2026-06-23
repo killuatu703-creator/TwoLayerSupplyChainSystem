@@ -1,0 +1,29 @@
+Parallelization experiment notes - 2026-06-15
+
+Experiment setting:
+- S1 jobs: 16
+- S2/S3 existing jobs: 8 each
+- Resources: 4
+- Operations: 64 for S1, 32 each for S2/S3 existing jobs
+- Outsourcing upper limit: removed in practice by setting it to the S1 job count
+- Compared methods: sequential offer calculation vs ThreadPoolExecutor offer calculation
+
+Sequential version:
+- Runtime: 143.33 seconds
+- Outsourced jobs: 16
+- Without outsourcing total_loss: 1415625
+- FCFS total_loss: 113780
+- EDD total_loss: 113780
+
+ThreadPoolExecutor version:
+- Runtime: 139.28 seconds
+- Outsourced jobs: 16
+- Without outsourcing total_loss: 1415625
+- FCFS total_loss: 113780
+- EDD total_loss: 113780
+
+Observation:
+- ThreadPoolExecutor did not change the outsourcing result.
+- Runtime improved only slightly in this small prototype.
+- This is expected because GA scheduling is CPU-heavy and Python threads are affected by the GIL.
+- For stronger speedup, ProcessPoolExecutor or another multiprocessing approach should be considered later.
