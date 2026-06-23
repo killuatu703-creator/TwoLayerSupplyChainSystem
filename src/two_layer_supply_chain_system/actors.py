@@ -175,7 +175,7 @@ class OutsourcingSupplier(Supplier):
                 supplier.make_offer(job)
                 supplier.contraction()
             else:
-                    supplier.rejection(job.job_name)
+                supplier.rejection(job.job_name)
 
     def send_order(self, job: Job) -> Job:
         """把 S1 的 Job 复制成外注订单。"""

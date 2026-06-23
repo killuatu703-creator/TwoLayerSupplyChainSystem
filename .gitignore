@@ -4,3 +4,4 @@ __pycache__/
 .claude/
 .venv/
 venv/
+results/*.png

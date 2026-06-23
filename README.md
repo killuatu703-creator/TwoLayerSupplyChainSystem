@@ -1,67 +1,64 @@
-# 两层供应链系统
+# TwoLayerSupplyChainSystem
 
-这是一个参考 Sugimoto Smalltalk 系统结构写成的 Python 简化版两层供应链模拟项目。
+Sugimoto の Smalltalk システムを参考にした，Python 版の簡易二層サプライチェーン外注シミュレーションです。
 
-目标是保留论文/原系统里的核心对象和流程：
+現在の実装は zemi 用の簡略モデルで，論文の全機能を完全再現したものではありません。主な目的は，S1 が生産停止後に外注候補 Job を選び，S2/S3 が GA で試排産して offer を返し，Greedy / Tabu Search で外注先を比較できるようにすることです。
 
-- `Client`
-- `Supplier`
-- `OutsourcingSupplier`
-- `OrderInformation`
-- `Job`
-- `Operation`
-- `Resource`
-- `Emulator`
-- `SchedulePlatform`
-- `SchedulePlatformForOutsourcing`
-- `GA2003`
-- `GAParameter`
+## 実装内容
 
-本版本用于两周 zemi 展示，重点是：
+- S1 / S2 / S3 の supplier モデル
+- S1 の生産停止時間帯: 3000[s] から 20000[s]
+- S2 / S3 の初期 Job
+- GA による簡易スケジューリング
+- ProcessPoolExecutor による S2/S3 offer 計算の試作並列化
+- Greedy による外注選択
+- Tabu Search による外注選択
+- tabu length / tabu tenure / tabu rounds の簡易設定
+- summary CSV と schedule CSV の出力
+- matplotlib による Gantt chart 出力
 
-1. 两层供应链基本模型
-2. 主供应商和外包供应商都使用 GA 排产
-3. 外包候选产品选择支持 `FCFS`、`EDD`、`GREEDY`
-4. offer 比较参考原 Smalltalk 逻辑：先检查纳期和价格，再纳期优先、价格次之
-5. S1 的生产停止时间段：3000 秒到 20000 秒
-6. 输出无外包和外包后的比较结果，并计算 `loss_reduction = L_no_outsource - L_outsource`
+## 現在の簡易目的関数
 
-## 运行方法
+GA の目的関数は次の形です。
 
-```bash
-cd two_layer_supply_chain_system
-python3 main.py
+```text
+weighted_tardiness + flow_time_weight * total_flow_time
 ```
 
-运行后会在 `results/` 目录输出：
+外注選択では，簡易版の損失削減量 `ΔL` を使っています。
 
-- `summary.csv`
-- `outsourcing_decisions.csv`
-- `schedule_without_outsourcing.csv`
-- `schedule_with_outsourcing.csv`
+```text
+ΔL = local_loss - outsourcing_loss
+```
 
-`summary.csv` 中的 `total_loss` 是简化版损失：
+現在の `total_loss` は簡略版で，主に納期遅れペナルティと外注費用を見ています。
 
 ```text
 total_loss = total_penalty + outsourcing_charge
 ```
 
-`loss_reduction` 是论文中的损失削减量 `ΔL` 的简化实现：
+## 実行方法
 
-```text
-loss_reduction = loss_without_outsourcing - total_loss
+```bash
+python3 main.py
 ```
 
-## 项目结构
+実行後，`results/` に CSV と Gantt chart PNG が出力されます。
+
+## 主なファイル
 
 ```text
-two_layer_supply_chain_system/
-  main.py
-  src/two_layer_supply_chain_system/
-    models.py
-    ga2003.py
-    emulator.py
-    schedule_platform.py
-    actors.py
-    result_comparator.py
+main.py
+src/two_layer_supply_chain_system/
+  models.py              # Job, Operation, Schedule, Offer などの基本データ
+  ga2003.py              # GA による排産
+  schedule_platform.py   # Schedule 生成，生産停止，外注候補管理
+  actors.py              # Client, Supplier, OutsourcingSupplier, Greedy, Tabu Search
+  emulator.py            # Schedule 履歴の保持
+  result_comparator.py   # CSV 出力
+  gantt_chart.py         # Gantt chart 出力
 ```
+
+## 注意
+
+論文版との差分として，輸送スケジュール，多段階交渉，SA，完全な損失関数，実験規模の再現などはまだ未実装です。
