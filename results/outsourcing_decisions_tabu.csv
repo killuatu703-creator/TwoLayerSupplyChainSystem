@@ -1,0 +1,12 @@
+job_name,winner,winner_due_date,winner_price,loss_reduction,tabu_jobs,candidate_count,evaluated_count,all_offers
+S1J11,S3,5500,6880,551360,"S1J06, S1J16",12,10,"S2: due=5710, price=10040, feasible=False; S3: due=5500, price=6880, feasible=True"
+S1J10,S2,2325,6570,503690,"S1J04, S1J05",11,9,"S2: due=2325, price=6570, feasible=True; S3: due=4895, price=6770, feasible=True"
+S1J14,S2,4500,6570,482950,"S1J02, S1J12",11,9,"S2: due=4500, price=6570, feasible=True; S3: due=6085, price=6770, feasible=True"
+S1J12,S2,5735,7750,480320,"S1J01, S1J08",9,7,"S2: due=5735, price=7750, feasible=True; S3: due=5770, price=7990, feasible=True"
+S1J16,S2,5380,7750,467790,"S1J03, S1J06",9,7,"S2: due=5380, price=7750, feasible=True; S3: due=5700, price=7990, feasible=True"
+S1J05,S3,1395,5660,206620,"S1J04, S1J07",7,5,"S2: due=1630, price=5980, feasible=True; S3: due=1395, price=5660, feasible=True"
+S1J01,S2,1080,5980,136180,S1J02,6,5,"S2: due=1080, price=5980, feasible=True; S3: due=4575, price=19060, feasible=False"
+S1J04,S2,3395,7750,192010,S1J08,5,4,"S2: due=3395, price=7750, feasible=True; S3: due=5475, price=27735, feasible=False"
+S1J08,S2,4585,7750,168450,S1J06,4,3,"S2: due=4585, price=7750, feasible=True; S3: due=5770, price=17290, feasible=False"
+S1J02,S3,1290,6770,160855,S1J07,3,2,"S2: due=3935, price=12465, feasible=False; S3: due=1290, price=6770, feasible=True"
+S1J06,S3,4370,6770,125870,,2,2,"S2: due=5510, price=15130, feasible=False; S3: due=4370, price=6770, feasible=True"
