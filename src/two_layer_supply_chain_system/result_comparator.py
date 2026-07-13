@@ -82,6 +82,9 @@ class ResultComparator:
                     "winner_due_date",
                     "winner_price",
                     "loss_reduction",
+                    "negotiation_round",
+                    "requested_due_date",
+                    "requested_price",
                     "tabu_jobs",
                     "candidate_count",
                     "evaluated_count",
@@ -99,6 +102,9 @@ class ResultComparator:
                         "winner_due_date": decision["winner_due_date"],
                         "winner_price": decision["winner_price"],
                         "loss_reduction": decision.get("loss_reduction", ""),
+                        "negotiation_round": decision.get("negotiation_round", ""),
+                        "requested_due_date": decision.get("requested_due_date", ""),
+                        "requested_price": decision.get("requested_price", ""),
                         "tabu_jobs": decision.get("tabu_jobs", ""),
                         "candidate_count": decision.get("candidate_count", ""),
                         "evaluated_count": decision.get("evaluated_count", ""),
@@ -108,6 +114,63 @@ class ResultComparator:
                         ),
                     }
                 )
+
+    def output_negotiation_history(
+        self,
+        decisions: list[dict[str, object]],
+        filename: str,
+    ) -> None:
+        # 多段階交渉の各 round の offer を CSV に出力する。
+        #
+        # outsourcing_decisions_*.csv は最終的に選ばれた外注先だけを見る表，
+        # negotiation_history_*.csv は交渉途中の全 offer を見る表。
+        # PPT では後者を見ることで，round ごとに希望条件がどう緩和されたかを確認できる。
+        #
+        path = self.output_dir / filename
+        with path.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=[
+                    "selected_job",
+                    "winner",
+                    "job_name",
+                    "negotiation_round",
+                    "requested_due_date",
+                    "requested_price",
+                    "supplier",
+                    "offer_due_date",
+                    "offer_price",
+                    "feasible_due_date",
+                    "feasible_price",
+                    "feasible",
+                    "loss_reduction",
+                ],
+            )
+            writer.writeheader()
+            for decision in decisions:
+                history = decision.get("negotiation_history", [])
+                if not isinstance(history, list):
+                    continue
+                for row in history:
+                    if not isinstance(row, dict):
+                        continue
+                    writer.writerow(
+                        {
+                            "selected_job": decision.get("job_name", ""),
+                            "winner": decision.get("winner", ""),
+                            "job_name": row.get("job_name", ""),
+                            "negotiation_round": row.get("negotiation_round", ""),
+                            "requested_due_date": row.get("requested_due_date", ""),
+                            "requested_price": row.get("requested_price", ""),
+                            "supplier": row.get("supplier", ""),
+                            "offer_due_date": row.get("offer_due_date", ""),
+                            "offer_price": row.get("offer_price", ""),
+                            "feasible_due_date": row.get("feasible_due_date", ""),
+                            "feasible_price": row.get("feasible_price", ""),
+                            "feasible": row.get("feasible", ""),
+                            "loss_reduction": row.get("loss_reduction", ""),
+                        }
+                    )
 
     def summary_row(
         self,

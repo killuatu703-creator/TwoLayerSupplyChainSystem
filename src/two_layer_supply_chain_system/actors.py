@@ -37,6 +37,9 @@ class CandidateEvaluation:
     job: Job
     offer: Offer
     loss_reduction: int
+    negotiation_round: int = 0
+    requested_due_date: int = 0
+    requested_price: int = 0
 
 
 @dataclass(slots=True)
@@ -209,6 +212,9 @@ class OutsourcingSupplier(Supplier):
     outsources: list[Supplier] = field(default_factory=list)
     customer: Client | None = None
     random_seed: int = 13
+    num_of_mitigation: int = 3
+    mitigate_t: float = 0.1
+    mitigate_p: float = 0.1
 
     def negotiation_process(self, new_job_information: Job) -> tuple[Offer | None, list[Offer]]:
         # 旧版 FCFS/EDD 使用的单一 Job 外注交涉流程。
@@ -321,6 +327,38 @@ class OutsourcingSupplier(Supplier):
             offer.feasible_price = offer.price <= an_order.job_price
         return offers
 
+    def relaxed_order(self, job: Job, requested_due_date: int, requested_price: int) -> Job:
+        # 多段階交渉の各 round で使う外注注文を作る。
+        #
+        # 元の Job の工程情報やコストは変えず，S1 側の希望条件だけを差し替える。
+        # requested_due_date は S1 が希望する納期，
+        # requested_price は S1 が許容する価格上限を表す。
+        #
+        order = job.copy_for_outsourcing()
+        order.order_due_date = requested_due_date
+        order.job_price = requested_price
+        order.client_due_date = job.client_due_date
+        order.finishing_time = job.finishing_time
+        return order
+
+    def relaxation_flags(
+        self,
+        offers: list[Offer],
+        requested_due_date: int,
+        requested_price: int,
+    ) -> tuple[bool, bool]:
+        # 本 round の offer を見て，次 round でどの条件を緩和するかを決める。
+        #
+        # 供应商提示的納期が S1 の希望納期より遅い場合は納期条件を緩和する。
+        # 供应商提示的価格が S1 の希望価格より高い場合は価格条件を緩和する。
+        # offer が 1 件もない場合は，両方の条件を緩和する。
+        #
+        if not offers:
+            return True, True
+        due_relaxation = any(offer.due_date > requested_due_date for offer in offers)
+        price_relaxation = any(offer.price > requested_price for offer in offers)
+        return due_relaxation, price_relaxation
+
     def best_offer(self, offers: list[Offer], key_name: str) -> list[Offer]:
         # 在多个 offer 中按纳期或价格筛选最优集合。
         if key_name == "due_date":
@@ -391,19 +429,134 @@ class OutsourcingSupplier(Supplier):
                     )
         return evaluations, offers_by_job
 
+    def candidate_evaluations_with_negotiation(
+        self,
+        jobs: list[Job],
+    ) -> tuple[list[CandidateEvaluation], dict[str, list[Offer]], list[dict[str, object]]]:
+        # 多段階交渉つきで「候補 Job × Supplier」を評価する。
+        #
+        # round 0 では元の納期・価格条件で S2/S3 から offer を取る。
+        # 条件を満たす offer がない Job は，次 round で S1 側の希望条件を緩和する。
+        # 現在は requested_due_date と requested_price を最大 10% ずつ緩和する設定。
+        #
+        evaluations: list[CandidateEvaluation] = []
+        latest_offers_by_job: dict[str, list[Offer]] = {
+            job.job_name: [] for job in jobs
+        }
+        negotiation_history: list[dict[str, object]] = []
+        job_by_name = {job.job_name: job for job in jobs}
+        unresolved = set(job_by_name)
+        request_terms = {
+            job.job_name: (job.order_due_date, job.job_price)
+            for job in jobs
+        }
+
+        for negotiation_round in range(self.num_of_mitigation + 1):
+            round_jobs = [
+                self.relaxed_order(
+                    job_by_name[job_name],
+                    requested_due_date=request_terms[job_name][0],
+                    requested_price=request_terms[job_name][1],
+                )
+                for job_name in sorted(unresolved)
+            ]
+            if not round_jobs:
+                break
+
+            offers_by_job = self.get_offers_for_jobs(round_jobs)
+            relaxed_by_name = {job.job_name: job for job in round_jobs}
+            resolved_this_round: set[str] = set()
+
+            for job_name in sorted(unresolved):
+                original_job = job_by_name[job_name]
+                relaxed_job = relaxed_by_name[job_name]
+                requested_due_date, requested_price = request_terms[job_name]
+                checked = self.check_match_order(relaxed_job, offers_by_job[job_name])
+                latest_offers_by_job[job_name] = checked
+
+                if not checked:
+                    negotiation_history.append(
+                        {
+                            "job_name": job_name,
+                            "negotiation_round": negotiation_round,
+                            "requested_due_date": requested_due_date,
+                            "requested_price": requested_price,
+                            "supplier": "",
+                            "offer_due_date": "",
+                            "offer_price": "",
+                            "feasible_due_date": False,
+                            "feasible_price": False,
+                            "feasible": False,
+                            "loss_reduction": "",
+                        }
+                    )
+                    continue
+
+                feasible_found = False
+                for offer in checked:
+                    loss_reduction = self.loss_reduction_for_offer(original_job, offer)
+                    negotiation_history.append(
+                        {
+                            "job_name": job_name,
+                            "negotiation_round": negotiation_round,
+                            "requested_due_date": requested_due_date,
+                            "requested_price": requested_price,
+                            "supplier": offer.supplier_name,
+                            "offer_due_date": offer.due_date,
+                            "offer_price": offer.price,
+                            "feasible_due_date": offer.feasible_due_date,
+                            "feasible_price": offer.feasible_price,
+                            "feasible": offer.feasible,
+                            "loss_reduction": loss_reduction,
+                        }
+                    )
+                    if offer.feasible and loss_reduction > 0:
+                        feasible_found = True
+                        evaluations.append(
+                            CandidateEvaluation(
+                                job=original_job,
+                                offer=offer,
+                                loss_reduction=loss_reduction,
+                                negotiation_round=negotiation_round,
+                                requested_due_date=requested_due_date,
+                                requested_price=requested_price,
+                            )
+                        )
+                if feasible_found:
+                    resolved_this_round.add(job_name)
+
+            unresolved -= resolved_this_round
+            for job_name in sorted(unresolved):
+                requested_due_date, requested_price = request_terms[job_name]
+                due_relaxation, price_relaxation = self.relaxation_flags(
+                    latest_offers_by_job[job_name],
+                    requested_due_date,
+                    requested_price,
+                )
+                request_terms[job_name] = (
+                    math.ceil(requested_due_date * (1 + self.mitigate_t))
+                    if due_relaxation
+                    else requested_due_date,
+                    math.ceil(requested_price * (1 + self.mitigate_p))
+                    if price_relaxation
+                    else requested_price,
+                )
+
+        return evaluations, latest_offers_by_job, negotiation_history
+
     def best_greedy_evaluation(
         self,
         jobs: list[Job],
-    ) -> tuple[CandidateEvaluation | None, dict[str, list[Offer]]]:
+    ) -> tuple[CandidateEvaluation | None, dict[str, list[Offer]], list[dict[str, object]]]:
         # Greedy/Tabu 共用的选择函数：评价所有候补方案，并选 ΔL 最大的方案。
         #
         # Greedy 会直接对所有候补 Job 使用这个函数；
         # Tabu Search 会先排除 tabu list 中的 Job，再对剩下的候补使用这个函数。
         #
-        evaluations, offers_by_job = self.candidate_evaluations(jobs)
+        evaluations, offers_by_job, negotiation_history = self.candidate_evaluations_with_negotiation(jobs)
         if not evaluations:
-            return None, offers_by_job
-        return self.best_by_loss_reduction(evaluations), offers_by_job
+            return None, offers_by_job, negotiation_history
+        return self.best_by_loss_reduction(evaluations), offers_by_job, negotiation_history
 
     def best_by_loss_reduction(
         self, evaluations: list[CandidateEvaluation]
@@ -538,15 +691,16 @@ class OutsourcingSupplier(Supplier):
 
                 # 对剩余候补 Job 计算所有 S2/S3 offer，然后根据当前 rule 选择本轮外注方案。
                 # offers_by_job 会保存每个 Job 收到的全部报价，最后写入 outsourcing_decisions_*.csv 方便检查交涉过程。
+                negotiation_history: list[dict[str, object]]
                 if rule == "SA":
-                    evaluations, offers_by_job = self.candidate_evaluations(search_candidates)
+                    evaluations, offers_by_job, negotiation_history = self.candidate_evaluations_with_negotiation(search_candidates)
                     if not evaluations:
                         for job in search_candidates:
                             self.platform.canceled_outsourcing_list.append(job.job_name)
                         break
                     best = self.simulated_annealing_evaluation(evaluations, rng)
                 else:
-                    best, offers_by_job = self.best_greedy_evaluation(search_candidates)
+                    best, offers_by_job, negotiation_history = self.best_greedy_evaluation(search_candidates)
                     if best is None:
                         for job in search_candidates:
                             self.platform.canceled_outsourcing_list.append(job.job_name)
@@ -560,10 +714,14 @@ class OutsourcingSupplier(Supplier):
                         "winner_due_date": best.offer.due_date,
                         "winner_price": best.offer.price,
                         "loss_reduction": best.loss_reduction,
+                        "negotiation_round": best.negotiation_round,
+                        "requested_due_date": best.requested_due_date,
+                        "requested_price": best.requested_price,
                         "tabu_jobs": ", ".join(sorted(tabu_jobs)),
                         "candidate_count": len(candidates),
                         "evaluated_count": len(search_candidates),
                         "offers": offers_by_job[best.job.job_name],
+                        "negotiation_history": negotiation_history,
                     }
                 )
                 self.create_scheduling()

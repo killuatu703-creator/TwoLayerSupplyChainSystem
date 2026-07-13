@@ -190,6 +190,10 @@ def main() -> None:
             decisions,
             f"outsourcing_decisions_{rule.lower()}.csv",
         )
+        comparator.output_negotiation_history(
+            decisions,
+            f"negotiation_history_{rule.lower()}.csv",
+        )
         for supplier_name, schedule in supplier_schedules.items():
             comparator.output_schedule(
                 f"schedule_{supplier_name.lower()}_after_outsourcing_{rule.lower()}.csv",
